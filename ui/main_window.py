@@ -30,7 +30,7 @@ class MainWindow(ctk.CTk):
 
     def _build(self):
         top = ctk.CTkFrame(self); top.pack(fill="x", padx=10, pady=(10, 0))
-        Toolbar(top, self.choose_files, self.choose_folder, self.start, self.pause, self.resume, self.stop).pack(side="left")
+        Toolbar(top, self.choose_files, self.choose_folder, self.remove_selected, self.start, self.pause, self.resume, self.stop).pack(side="left")
         ctk.CTkOptionMenu(top, values=["System", "Light", "Dark"], command=lambda v: ctk.set_appearance_mode(v.lower())).pack(side="right", padx=5)
         self.workers = ctk.CTkOptionMenu(top, values=[str(x) for x in range(1, DEFAULT_WORKERS + 1)]); self.workers.set(str(DEFAULT_WORKERS)); self.workers.pack(side="right", padx=5)
         ctk.CTkLabel(top, text="Threads").pack(side="right")
@@ -61,6 +61,20 @@ class MainWindow(ctk.CTk):
     def choose_folder(self):
         folder = filedialog.askdirectory()
         if folder: self._add_paths([p for p in Path(folder).rglob("*") if p.is_file()])
+
+    def remove_selected(self):
+        """Remove selected images from this OCR job without touching source files."""
+        selected = list(self.files.curselection())
+        if not selected:
+            return messagebox.showinfo(APP_NAME, "กรุณาเลือกรายการที่ต้องการลบก่อน")
+        removed = [self.display_paths[i] for i in selected]
+        removed_set = set(removed)
+        self.paths = [path for path in self.paths if path not in removed_set]
+        self.display_paths = [path for path in self.display_paths if path not in removed_set]
+        self.files.delete(0, tk.END)
+        for path in self.display_paths:
+            self.files.insert(tk.END, Path(path).name)
+        self.status.configure(text=f"ลบ {len(removed)} รายการแล้ว | เหลือ {len(self.paths)} ไฟล์")
 
     def _enable_drag_drop(self):
         """Activate native file drops when the optional tkinterdnd2 package is available."""
